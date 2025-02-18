@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from statsmodels.tsa.ar_model import AutoReg
 from generate_data import generate_random_walk_price_series
 from backtest_strategy import backtest_strategy, plot_results
-from ma import moving_average_crossover
+from moving_average import moving_average_crossover
 
 
 np.random.seed(42)

@@ -7,16 +7,19 @@ from backtest_strategy import backtest_strategy, plot_results
 from moving_average import moving_average_crossover
 
 
-np.random.seed(42)
+# Set random seed for reproducibility
+# np.random.seed(42)
 
 
 def test_moving_average_crossover(df):
     df_ma = df.copy()
     df_ma = moving_average_crossover(df_ma, short_window=20, long_window=50)
-    df_ma, total_return_ma = backtest_strategy(df_ma, 'MA_Signal')
+    df_ma, total_return_ma = backtest_strategy(df_ma, "MA_Signal")
     print(f"Moving Average Strategy Total Return: {total_return_ma:.2%}")
     plot_results(df_ma, title="Moving Average Crossover Strategy")
 
+
 if __name__ == "__main__":
     df = generate_random_walk_price_series()
-    test_moving_average_crossover(df)
+    print(df)
+    # test_moving_average_crossover(df)

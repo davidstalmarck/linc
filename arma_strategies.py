@@ -26,11 +26,11 @@ def basic_long_short_signal(forecast, last_position):
     Returns 'BUY', 'SELL', or 'HOLD' for a basic long/short approach.
     """
     if forecast > 0 and last_position <= 0:
-        return "BUY"
+        return 1
     elif forecast < 0 and last_position >= 0:
-        return "SELL"
+        return -1
     else:
-        return "HOLD"
+        return 0
 
 
 def threshold_signal(forecast, last_position, threshold=0.0005):
@@ -38,11 +38,11 @@ def threshold_signal(forecast, last_position, threshold=0.0005):
     Returns 'BUY', 'SELL', or 'HOLD' if forecast crosses thresholds.
     """
     if forecast > threshold and last_position <= 0:
-        return "BUY"
+        return 1
     elif forecast < -threshold and last_position >= 0:
-        return "SELL"
+        return -1
     else:
-        return "HOLD"
+        return 0
 
 
 def magnitude_signal(forecast, scale_factor=0.001, max_shares=50):

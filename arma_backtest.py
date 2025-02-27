@@ -60,6 +60,7 @@ def backtest_ar_strategy(
 
         # Instead of duplicating the code, we call train_arima from our shared module
         model = train_arima(train_slice, p, q, stock_name=df["symbol"].iloc[t])
+        print(model.summary())
 
         forecast = model.forecast(steps=1).iloc[0]
         current_price = df["avgPrice"].iloc[t]
@@ -72,18 +73,18 @@ def backtest_ar_strategy(
         # Decide signal based on strategy
         if strategy == "basic":
             signal = basic_long_short_signal(forecast, last_position_dir)
-            if signal == "BUY":
+            if signal == 1:
                 position = 10
                 last_position_dir = 1
-            elif signal == "SELL":
+            elif signal == -1:
                 position = -10
                 last_position_dir = -1
         elif strategy == "threshold":
             signal = threshold_signal(forecast, last_position_dir, threshold)
-            if signal == "BUY":
+            if signal == 1:
                 position = 10
                 last_position_dir = 1
-            elif signal == "SELL":
+            elif signal == -1:
                 position = -10
                 last_position_dir = -1
         elif strategy == "magnitude":

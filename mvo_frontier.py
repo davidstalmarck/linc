@@ -134,7 +134,7 @@ def main():
     returns_wide = compute_returns_from_csv(csv_file)
 
     # Plot efficient frontier for these stocks
-    plot_efficient_frontier(returns_wide, num_points=25)
+    plot_efficient_frontier(returns_wide, num_points=50)
 
 
 if __name__ == "__main__":

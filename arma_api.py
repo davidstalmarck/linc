@@ -56,21 +56,21 @@ def rolling_forecast(
             # Decide action
             if strategy == "basic":
                 signal = basic_long_short_signal(forecast_val, last_position_dir)
-                if signal == "BUY":
+                if signal == 1:
                     lh.buy(stock_name, amount=10, days_to_cancel=1)
                     last_position_dir = 1
                     print(f"[+] Buying {stock_name}, forecast={forecast_val:.5f}")
-                elif signal == "SELL":
+                elif signal == -1:
                     lh.sell(stock_name, amount=10, days_to_cancel=1)
                     last_position_dir = -1
                     print(f"[-] Selling {stock_name}, forecast={forecast_val:.5f}")
 
             elif strategy == "threshold":
                 signal = threshold_signal(forecast_val, last_position_dir, threshold)
-                if signal == "BUY":
+                if signal == 1:
                     lh.buy(stock_name, amount=10, days_to_cancel=1)
                     last_position_dir = 1
-                elif signal == "SELL":
+                elif signal == -1:
                     lh.sell(stock_name, amount=10, days_to_cancel=1)
                     last_position_dir = -1
 

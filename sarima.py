@@ -8,6 +8,10 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from backtest_strategy import backtest_strategy, plot_results
 from generate_data import generate_random_walk_price_series, generate_ARIMA_process
 
+import warnings
+
+warnings.filterwarnings("ignore")
+
 
 def train_test_split(df, split_ratio=0.7):
     # Split dataset

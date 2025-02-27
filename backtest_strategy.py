@@ -29,9 +29,20 @@ def backtest_strategy(df, signal_col):
 
 
 def plot_results(df, title="Strategy Backtest"):
-    plt.figure(figsize=(10, 6))
-    df["CumMarketReturn"].plot(label="Market (Buy & Hold)", alpha=0.7)
-    df["CumStrategyReturn"].plot(label="Strategy", alpha=0.7)
-    plt.title(title)
-    plt.legend()
+    fig, ax = plt.subplots(
+        2, 1, figsize=(10, 6)
+    )  # Create two subplots stacked vertically
+
+    ax[0].plot(df["CumMarketReturn"], label="Market (Buy & Hold)", alpha=0.7)
+    ax[0].plot(df["CumStrategyReturn"], label="Strategy", alpha=0.7)
+    ax[0].set_title("Cumulative Returns")
+    ax[0].legend()
+
+    ax[1].plot(df["Signal"], label="Signal", alpha=0.7)
+    ax[1].set_title("Signal")
+    ax[1].legend()
+
+    fig.suptitle(title)  # Set the main title for the figure
+
+    plt.tight_layout()  # Adjust layout for better spacing
     plt.show()

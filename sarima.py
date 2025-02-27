@@ -98,26 +98,26 @@ def generate_signal(df, forecast_col="Forecast_Price"):
     # Generate signals:
     # +1 if forecasted price(t) > actual price(t-1) => expecting an upward move
     # -1 if forecasted price(t) < actual price(t-1) => expecting a downward move
-    df_test["Signal"] = 0
-    df_test.loc[
-        df_test["Forecast_Price_Shifted"] > df_test["Close_Shifted"], "Signal"
-    ] = 1
-    df_test.loc[
-        df_test["Forecast_Price_Shifted"] < df_test["Close_Shifted"], "Signal"
-    ] = -1
+    # df_test["Signal"] = 0
+    # df_test.loc[
+    #     df_test["Forecast_Price_Shifted"] > df_test["Close_Shifted"], "Signal"
+    # ] = 1
+    # df_test.loc[
+    #     df_test["Forecast_Price_Shifted"] < df_test["Close_Shifted"], "Signal"
+    # ] = -1
 
     # Replace any NaN with 0
-    df_test["Signal"] = df_test["Signal"].fillna(0)
+    # df_test["Signal"] = df_test["Signal"].fillna(0)
 
     # Threshold-based signal generation
-    # threshold = 0.5  # e.g., require a 0.5 unit price difference
-    # df_test["Expected_Move"] = (
-    #     df_test["Forecast_Price_Shifted"] - df_test["Close_Shifted"]
-    # )
+    threshold = 5.0
+    df_test["Expected_Move"] = (
+        df_test["Forecast_Price_Shifted"] - df_test["Close_Shifted"]
+    )
 
-    # df_test["Signal"] = 0
-    # df_test.loc[df_test["Expected_Move"] > threshold, "Signal"] = 1
-    # df_test.loc[df_test["Expected_Move"] < -threshold, "Signal"] = -1
+    df_test["Signal"] = 0
+    df_test.loc[df_test["Expected_Move"] > threshold, "Signal"] = 1
+    df_test.loc[df_test["Expected_Move"] < -threshold, "Signal"] = -1
     return df
 
 
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     plt.show()
 
     # Perform rolling forecast (ARIMA)
-    p, d, q = 2, 1, 2
+    p, d, q = 1, 0, 0
 
     # Specify constraints to fix lags 1, 3,4,5,6,7,8 at 0.
     # constraints = {
@@ -162,23 +162,23 @@ if __name__ == "__main__":
     #     df_train["Close"], order=(p, d, q), enforce_stationarity=False
     # ).fit_constrained(constraints=constraints)
 
-    model = ARIMA(df_train["Close"], order=(p, d, q)).fit()
-    print(model.summary())
+    # model = ARIMA(df_train["Close"], order=(p, d, q)).fit()
+    # print(model.summary())
 
-    # Plot ACF and PACF of residuals
-    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
-    plot_acf(model.resid, lags=50, ax=ax[0])
-    plot_pacf(model.resid, lags=50, ax=ax[1])
-    plt.show()
+    # # Plot ACF and PACF of residuals
+    # fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    # plot_acf(model.resid, lags=50, ax=ax[0])
+    # plot_pacf(model.resid, lags=50, ax=ax[1])
+    # plt.show()
 
-    forecast = model.forecast(steps=10)
-    # Set forecast index to continue from the last date in df_train
-    forecast.index = pd.date_range(start=df_train.index[-1], periods=10, freq="D")
-    plt.plot(df_train["Close"])
-    plt.plot(forecast)
-    plt.show()
+    # forecast = model.forecast(steps=100)
+    # # Set forecast index to continue from the last date in df_train
+    # forecast.index = pd.date_range(start=df_train.index[-1], periods=100, freq="D")
+    # plt.plot(df_train["Close"])
+    # plt.plot(forecast)
+    # plt.show()
 
-    exit()
+    # exit()
 
     df_test = rolling_forecast_arima_prices(df_train, df_test, p, d, q)
 

@@ -11,8 +11,16 @@ def compute_returns_from_csv(csv_file: str) -> pd.DataFrame:
     """
     df = pd.read_csv(csv_file)
 
+    df.drop_duplicates(subset=["gmtTime", "symbol"], inplace=True)
+
     # Compute midpoint price
     df["midPrice"] = (df["askMedian"] + df["bidMedian"]) / 2.0
+
+    # Filter to get only rows for INDEX1
+    df_index1 = df[df["symbol"] == "INDEX1"].copy()
+
+    # Sort by time (good practice before plotting time series)
+    df_index1.sort_values("gmtTime", inplace=True)
 
     # Sort by time to be consistent
     df.sort_values(by=["gmtTime", "symbol"], inplace=True)
@@ -130,7 +138,7 @@ def plot_efficient_frontier(returns_wide: pd.DataFrame, num_points=20):
 
 def main():
     # Example usage
-    csv_file = "datasets/stockPrices_hourly.csv"
+    csv_file = "datasets/Historical_Data.csv"
     returns_wide = compute_returns_from_csv(csv_file)
 
     # Plot efficient frontier for these stocks

@@ -99,13 +99,13 @@ def evaluate_backtest(equity_df: pd.DataFrame):
 
 
 def main():
-    csv_file = "datasets/stockPrices_hourly.csv"
+    csv_file = "datasets/Historical_Data.csv"
     df_raw = load_and_prepare_data(csv_file)
     returns_wide = compute_returns_wide(df_raw)
 
     # For example: rolling 50-step window, target return of 0.1% per step
-    window_size = 200
-    target_return = 0.0
+    window_size = 100
+    target_return = 0.001
 
     results_df, all_weights = rolling_mvo_backtest(
         returns_wide, window_size, target_return

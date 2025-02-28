@@ -3,7 +3,13 @@ import pandas as pd
 import numpy as np
 import hackathon_linc as lh
 import warnings
+import os
+from dotenv import load_dotenv
 from mvo_strategies import mvo_optimize
+
+load_dotenv()
+
+API_KEY = os.environ.get("API_KEY")
 
 
 def get_returns_wide_live(days_back=365):
@@ -11,12 +17,7 @@ def get_returns_wide_live(days_back=365):
     Fetch data from the broker for all tickers, convert to a wide returns DataFrame.
     We assume you want to consider multiple symbols (since MVO typically is multi-asset).
     """
-    # Example: fetch data for all or multiple symbols
-    # If the API can fetch for multiple symbols at once, do so.
-    # Otherwise you might have to loop over the symbols.
-    data_dict = lh.get_historical_data(
-        days_back
-    )  # returns data for all? depends on the API
+    data_dict = lh.get_historical_data(days_back)
     df = pd.DataFrame(data_dict)
     df["gmtTime"] = pd.to_datetime(df["gmtTime"])
     df.sort_values("gmtTime", inplace=True)
@@ -30,68 +31,109 @@ def get_returns_wide_live(days_back=365):
     return returns_wide
 
 
-def live_mvo_trading(target_return=0.001, capital=10_000, sleep_time=60):
-    lh.init("YOUR-API-KEY")
+def live_mvo_trading(
+    target_return=0.001,
+    capital=10_000,
+    sleep_time=60,
+    window_size=100,
+    trade_threshold=5,
+):
+    """
+    Live trading loop:
+      - uses MVO to compute weights from the last `window_size` days
+      - only trades the difference between current holdings and target holdings
+      - trades are skipped if the difference in shares is below `trade_threshold`
+    """
+    lh.init(API_KEY)
 
     while True:
         try:
-            # 1) fetch data
-            returns_wide = get_returns_wide_live(days_back=365)
+            print("[*] Fetching historical data...")
+            returns_wide = get_returns_wide_live(days_back=window_size)
 
-            # 2) solve MVO
+            print("[*] Solving MVO...")
             w_opt = mvo_optimize(returns_wide, target_return, long_only=True)
             print("MVO Weights:\n", w_opt)
 
-            # 3) convert weights -> positions
-            # Suppose we buy each stock weighting of 'w_opt[i]' times 'capital'
-            # Then the number of shares = (weight * capital) / current_price
-            # So we need the current price for each symbol from the broker
+            # 1) Fetch current portfolio
+            portfolio = (
+                lh.get_portfolio()
+            )  # Example: { 'STOCK1': 12, 'STOCK2': 50, ... }
+
+            # 2) For each symbol in MVO solution, find out how many shares we WANT
+            #    shares_desired = (weight * capital) / current_price
             current_prices = {}
-            # Example: we fetch each symbol’s current price
             for symbol in w_opt.index:
                 response = lh.get_current_price(symbol)
-                # response = { "data": [ { "askMedian":..., "bidMedian":..., "symbol":... } ] }
                 data_obj = response["data"][0]
                 mid = (data_obj["askMedian"] + data_obj["bidMedian"]) / 2.0
                 current_prices[symbol] = mid
 
-            # 4) place orders
-            # Before placing new orders, you might want to cancel existing ones or flatten your portfolio.
-            # For simplicity, let's flatten everything by selling all first:
-            # (In reality you'd track existing positions or do partial rebalancing.)
-            portfolio = lh.get_portfolio()  # dict: { symbol: shares }
-            for sym, qty in portfolio.items():
-                if qty > 0:
-                    lh.sell(sym, amount=qty, days_to_cancel=1)
-                elif qty < 0:
-                    # If negative positions are allowed or exist (short?), then we might buy to cover.
-                    lh.buy(sym, amount=abs(qty), days_to_cancel=1)
+            # Also consider any symbol we currently hold but isn't in w_opt
+            # (the MVO weight is effectively zero for that symbol)
+            all_symbols = set(portfolio.keys()).union(set(w_opt.index))
 
-            # Now place new orders according to w_opt
-            for symbol, weight in w_opt.items():
-                if weight <= 0:
-                    continue
+            for symbol in all_symbols:
+                # Desired weight is 0 if symbol not in w_opt
+                weight = w_opt.get(symbol, 0.0)
+
+                # Current price
+                if symbol not in current_prices:
+                    # If we don't have a price (maybe symbol not in w_opt?), fetch it
+                    response = lh.get_current_price(symbol)
+                    data_obj = response["data"][0]
+                    mid = (data_obj["askMedian"] + data_obj["bidMedian"]) / 2.0
+                    current_prices[symbol] = mid
                 price = current_prices[symbol]
-                # # of shares we want to buy
-                shares = int((weight * capital) / price)
-                if shares > 0:
-                    lh.buy(symbol, amount=shares, days_to_cancel=1)
-                    print(
-                        f"[+] Buying {shares} of {symbol} at ~{price:.2f}, weight={weight:.3f}"
-                    )
 
-            print("[*] Done placing orders; sleeping...")
+                # Compute how many shares we want
+                desired_shares = int((weight * capital) / price) if price > 0 else 0
+
+                # Check how many we currently have
+                current_shares = portfolio.get(symbol, 0)
+
+                # difference in shares
+                diff = desired_shares - current_shares
+
+                if abs(diff) >= trade_threshold:
+                    # Positive => we need to buy the difference
+                    # Negative => we need to sell
+                    if diff > 0:
+                        # buy `diff` shares
+                        lh.buy(symbol, amount=diff, days_to_cancel=1)
+                        print(
+                            f"[+] Buying {diff} {symbol} (current={current_shares}, desired={desired_shares})"
+                        )
+                    else:
+                        # sell `abs(diff)` shares
+                        to_sell = abs(diff)
+                        lh.sell(symbol, amount=to_sell, days_to_cancel=1)
+                        print(
+                            f"[-] Selling {to_sell} {symbol} (current={current_shares}, desired={desired_shares})"
+                        )
+
+                    # Sleep a bit to avoid spamming server
+                    time.sleep(1)
+                else:
+                    # If difference is below threshold, skip
+                    pass
+
+            print("[*] Done rebalancing; sleeping...")
             time.sleep(sleep_time)
 
         except Exception as e:
             print("Error:", e)
-            time.sleep(5)
+            time.sleep(sleep_time)
 
 
 def main():
     warnings.filterwarnings("ignore")
     live_mvo_trading(
-        target_return=0.001, capital=10_000, sleep_time=60  # 0.1% per day (or hour)
+        target_return=0.00015,  # Example target
+        capital=10_000,
+        sleep_time=5,
+        window_size=100,
+        trade_threshold=3,  # Only rebalance if difference >= 5 shares
     )
 
 

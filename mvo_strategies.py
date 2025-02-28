@@ -13,9 +13,6 @@ def load_and_prepare_data(csv_file: str) -> pd.DataFrame:
     df.sort_values("gmtTime", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    # Example: remove 2020 data if you want
-    df = df[df["gmtTime"].dt.year < 2020]
-
     return df
 
 
@@ -27,6 +24,8 @@ def compute_returns_wide(df: pd.DataFrame) -> pd.DataFrame:
       - Values are daily/hourly returns
     Assumes df has columns: 'gmtTime', 'askMedian', 'bidMedian', 'symbol'.
     """
+    df.drop_duplicates(subset=["gmtTime", "symbol"], inplace=True)
+
     df["midPrice"] = (df["askMedian"] + df["bidMedian"]) / 2.0
 
     # We pivot by 'gmtTime' x 'symbol'

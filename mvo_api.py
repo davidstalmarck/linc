@@ -26,8 +26,12 @@ def get_returns_wide_live(days_back=365):
     df["midPrice"] = (df["askMedian"] + df["bidMedian"]) / 2.0
     df["returns"] = df.groupby("symbol")["midPrice"].pct_change()
 
+    # Add a "CASH" column with 0.0 returns at every timestamp
+
     returns_wide = df.pivot(index="gmtTime", columns="symbol", values="returns")
     returns_wide.dropna(how="all", inplace=True)
+
+    returns_wide["CASH"] = 0.0
     return returns_wide
 
 
@@ -56,14 +60,14 @@ def live_mvo_trading(
             print("MVO Weights:\n", w_opt)
 
             # 1) Fetch current portfolio
-            portfolio = (
-                lh.get_portfolio()
-            )  # Example: { 'STOCK1': 12, 'STOCK2': 50, ... }
+            portfolio = lh.get_portfolio()
 
             # 2) For each symbol in MVO solution, find out how many shares we WANT
             #    shares_desired = (weight * capital) / current_price
             current_prices = {}
             for symbol in w_opt.index:
+                if symbol == "CASH":
+                    continue
                 response = lh.get_current_price(symbol)
                 data_obj = response["data"][0]
                 mid = (data_obj["askMedian"] + data_obj["bidMedian"]) / 2.0
@@ -74,6 +78,8 @@ def live_mvo_trading(
             all_symbols = set(portfolio.keys()).union(set(w_opt.index))
 
             for symbol in all_symbols:
+                if symbol == "CASH":
+                    continue
                 # Desired weight is 0 if symbol not in w_opt
                 weight = w_opt.get(symbol, 0.0)
 
@@ -113,7 +119,7 @@ def live_mvo_trading(
                         )
 
                     # Sleep a bit to avoid spamming server
-                    time.sleep(1)
+                    # time.sleep(1)
                 else:
                     # If difference is below threshold, skip
                     pass
@@ -130,7 +136,7 @@ def main():
     warnings.filterwarnings("ignore")
     live_mvo_trading(
         target_return=0.00015,  # Example target
-        capital=10_000,
+        capital=100_000,
         sleep_time=5,
         window_size=100,
         trade_threshold=3,  # Only rebalance if difference >= 5 shares
